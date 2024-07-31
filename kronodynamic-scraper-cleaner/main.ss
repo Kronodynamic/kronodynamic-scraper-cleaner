@@ -2,7 +2,7 @@
 (import :std/error
         :std/sugar
         :std/cli/getopt
-        ./lib)
+        ./parser)
 (export main)
 
 ;; build manifest; generated during the build
@@ -10,7 +10,7 @@
 (include "../manifest.ss")
 
 (def (main . args)
-  (call-with-getopt kronodynamic-scraper-cleaner-main aargs
+  (call-with-getopt kronodynamic-scraper-cleaner-main args
     program: "kronodynamic-scraper-cleaner"
     help: "A one line description of your program"
     ;; commands/options/flags for your program; see :std/cli/getopt
@@ -20,11 +20,7 @@
         help: "Directory to search and parse scraper output"))))
 
 (def* kronodynamic-scraper-cleaner-main
-  ((opt)
-   (kronodynamic-scraper-cleaner-main/options opt))
   ((cmd opt)
-   (kronodynamic-scraper-cleaner-main/command cmd opt)))
-
-;;; Implement this if your CLI has commands
-(def (kronodynamic-scraper-cleaner-main/command cmd opt)
-  (display "Implement me, command!\n"))
+   (let 
+    ((p (Parser))) 
+    {run p})))
