@@ -13,7 +13,7 @@ git clone git@github.com:facebook/rocksdb.git
 cd rocks_db
 make shared_lib install
 ```
-The code above will install RocksDB library at /usr/local/lib.
+The code above will install RocksDB library at `/usr/local/lib`.
 
 Then go to the crawler project root, and build it:
 ```sh
@@ -26,5 +26,5 @@ And then run it:
 LD_LIBRARY_PATH=/usr/local/lib gerbil env kronodynamic-scraper-cleaner parse <directory>
 ```
 
-It's advisable to add the path /usr/local/lib to global LIBRARY\_PATH.
+It's advisable to add the path `/usr/local/lib` to global `LD\_LIBRARY\_PATH`.
 
