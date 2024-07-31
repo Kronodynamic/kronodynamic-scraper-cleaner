@@ -26,5 +26,5 @@ And then run it:
 LD_LIBRARY_PATH=/usr/local/lib gerbil env kronodynamic-scraper-cleaner parse <directory>
 ```
 
-It's advisable to add the path `/usr/local/lib` to global `LD\_LIBRARY\_PATH`.
+It's advisable to add the path `/usr/local/lib` to global `LD_LIBRARY_PATH`.
 
