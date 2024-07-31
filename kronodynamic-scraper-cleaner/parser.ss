@@ -12,7 +12,7 @@
     #include <rocksdb/c.h>
     void testprintf() {
       rocksdb_options_t *opts = rocksdb_options_create();
-      printf("Test function: %ld", (long)opts);
+      printf("Test function: %ld\n", (long)opts);
       rocksdb_options_destroy(opts);
     }
 ____c-declare-end
