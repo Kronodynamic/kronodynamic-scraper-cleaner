@@ -6,11 +6,17 @@
 (export #t)
 
 ;; External FFI declaration:
-(begin-ffi (testprintf
-            rocksdb-options-create
-            rocksdb-options-destroy
-            rocksdb-options-t
-            rocksdb-options-t*)
+(begin-ffi (open-database 
+            close-database 
+            write-key 
+            open-iterator 
+            close-iterator 
+            iterator-first
+            iterator-next
+            iterator-valid
+            iterator-key
+            iterator-value
+            release)
   (c-declare #<<____c-declare-end
     #include <stdio.h>
     #include <stdlib.h>
@@ -39,7 +45,6 @@
         return NULL;
       }
       rocksdb_container_t *container = (rocksdb_container_t*) malloc(sizeof(rocksdb_container_t));
-
       container->opts = opts;
       container->wo = rocksdb_writeoptions_create();
       container->ro = rocksdb_readoptions_create();
@@ -56,35 +61,56 @@
       free(container);
     }
 
-    // TODO: Create function to write key to RocksDB and increase its value. Return its value
     int write_key(rocksdb_container_t *container, char *key) {
+      char *err = NULL;  
+      size_t rlen = 0;
+      char *value = rocksdb_get(container->db, container->ro, key, strlen(key), &rlen, &err);
+      if (err != NULL) {
+        // TODO: Initialize key here
+          fprintf(stderr, "get key %s\n", err);
+          free(value);
+          free(err);
+          return -1;
+      }
+      // TODO: Increase value here
+      value = "0";
+      rocksdb_put(container->db, container->wo, key, strlen(key), value, strlen(value), &err);
+      if (err != NULL) {
+        fprintf(stderr, "put key %s\n", err);
+        free(err);
+        // free(value);
+        return -1;
+      }
+      free(err);
+      // free(value);
       return 0;
     }
 
-    // TODO: Create functions to list (all) keys from RocksDB
     rocksdb_iterator_t *open_iterator(rocksdb_container_t *container) {
+      return rocksdb_create_iterator(container->db, container->ro);
+    }
+
+    char *iterator_key(rocksdb_iterator_t *iterator) {
       return NULL;
     }
 
-    void close_iterator(rocksdb_container_t *container, rocksdb_iterator_t *iterator) {
-    }
-
-    char *next_key(rocksdb_iterator_t *iterator) {
+    char *iterator_value(rocksdb_iterator_t *iterator) {
       return NULL;
     }
 
-    void clear_key(char *key) {
-      free(key);
-    }
 ____c-declare-end
   )
   (define-c-lambda open-database (nonnull-char-string) (pointer void) "open_database")
   (define-c-lambda close-database ((pointer void)) void "close_database")
   (define-c-lambda write-key ((pointer void) nonnull-char-string) int "write_key")
   (define-c-lambda open-iterator ((pointer void)) (pointer void) "open_iterator")
-  (define-c-lambda close-iterator ((pointer void) (pointer void)) void "close_iterator")
-  (define-c-lambda next-key ((pointer void)) char-string "next_key")
-  (define-c-lambda clear-key (nonnull-char-string) void "clear_key"))
+  (define-c-lambda close-iterator ((pointer void)) void "rocksdb_iter_destroy")
+  (define-c-lambda iterator-first((pointer void)) void "rocksdb_iter_seek_to_first")
+  (define-c-lambda iterator-next ((pointer void)) void "rocksdb_iter_next")
+  (define-c-lambda iterator-valid ((pointer void)) unsigned-char "rocksdb_iter_valid")
+  (define-c-lambda iterator-key ((pointer void)) char-string "iterator_key")
+  (define-c-lambda iterator-value ((pointer void)) char-string "iterator_value")
+  (define-c-lambda release ((pointer void)) void "free"))
 
 (defclass Parser 
   (input-dir
@@ -107,11 +133,9 @@ ____c-declare-end
     (display "This is the output file: ")
     (display (@ self output-file))
     (display "\n")
-    (let ((p (rocksdb-options-create)))
-      (display "This is RocksDB pointer: ")
-      (display p)
+    (let* ((dpath "database-file.bin")
+           (db (open-database dpath)))
+      (display "This is RocksDB database pointer: ")
+      (display db)
       (display "\n")
-      (rocksdb-options-destroy p)
-      (display "This is RocksDB cleaned pointer: ")
-      (display p)
-      (display "\n"))))
+      (close-database db))))
