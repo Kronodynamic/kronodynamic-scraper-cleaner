@@ -2,6 +2,7 @@
 (import :std/error
         :std/sugar
         :std/foreign
+        :std/misc/process
         :scheme/process-context)
 (export #t)
 
@@ -127,15 +128,20 @@ ____c-declare-end
 
 (defmethod {run Parser}
   (lambda (self)
-    (display "This is the input directory: ")
-    (display (@ self input-dir))
-    (display "\n")
-    (display "This is the output file: ")
-    (display (@ self output-file))
-    (display "\n")
-    (let* ((dpath "database-file.bin")
-           (db (open-database dpath)))
-      (display "This is RocksDB database pointer: ")
-      (display db)
+    (let ((dpath (string-append 
+                   (get-environment-variable "HOME") 
+                   "/.kronodynamic/database-file.bin")))
+      (display "This is the input directory: ")
+      (display (@ self input-dir))
       (display "\n")
-      (close-database db))))
+      (display "This is the output file: ")
+      (display (@ self output-file))
+      (display "\n")
+      ; Remove any previous database, if it exists:
+      (if (file-exists? dpath) (run-process ["rm" "-Rf" dpath]))
+      (let* ((db (open-database dpath)))
+        (display "This is RocksDB database pointer: ")
+        (display db)
+        (display "\n")
+        (close-database db)
+        (display "Database closed!\n")))))
