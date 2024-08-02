@@ -141,6 +141,8 @@ ____c-declare-end
     (let* ((db (open-database dpath)))
       (display "This is RocksDB database pointer: ")
       (display db)
+      (display "Adding random key:\n")
+      (display (write-key db "key"))
       (display "\n")
       (close-database db)
       (display "Database closed.\n")
