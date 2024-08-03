@@ -66,6 +66,7 @@
       char *err = NULL;  
       size_t rlen = 0;
       char *value = rocksdb_get(container->db, container->ro, key, strlen(key), &rlen, &err);
+      printf("Trying to load key - size: %ld /value: %s\n", rlen, value);
       if (err != NULL) {
         // TODO: Initialize key here
           fprintf(stderr, "get key %s\n", err);
@@ -98,7 +99,6 @@
     char *iterator_value(rocksdb_iterator_t *iterator) {
       return NULL;
     }
-
 ____c-declare-end
   )
   (define-c-lambda open-database (nonnull-char-string) (pointer void) "open_database")
@@ -142,6 +142,10 @@ ____c-declare-end
       (display "This is RocksDB database pointer: ")
       (display db)
       (display "Adding random key:\n")
+      (display (write-key db "key"))
+      (display "\n")
+      (display (write-key db "key"))
+      (display "\n")
       (display (write-key db "key"))
       (display "\n")
       (close-database db)
