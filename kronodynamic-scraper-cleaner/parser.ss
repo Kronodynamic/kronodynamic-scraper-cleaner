@@ -1,9 +1,11 @@
 ;;; -*- Gerbil -*-
-(import :std/error
-        :std/sugar
+(import :scheme/process-context
+        :std/error
         :std/foreign
+        :std/misc/ports
         :std/misc/process
-        :scheme/process-context)
+        :std/sort
+        :std/sugar)
 (export #t)
 
 ;; External FFI declaration:
@@ -144,22 +146,25 @@ ____c-declare-end
 
 (defclass Parser 
   (input-dir
-   output-file)
+   output-file
+   dpath)
   constructor: :constructor!)
 
 (defmethod {:constructor! Parser}
   (lambda 
     (self 
      (input-dir (string-append (get-environment-variable "HOME") "/.kronodynamic/database")) 
-     (output-file "./output.txt"))
+     (output-file "./output.txt")
+     (dpath (string-append
+              (get-environment-variable "HOME") 
+              "/.kronodynamic/scraper-cleaner-database-file.bin")))
        (set! (@ self input-dir) input-dir)
-       (set! (@ self output-file) output-file)))
+       (set! (@ self output-file) output-file)
+       (set! (@ self dpath) dpath)))
 
 (defmethod {run Parser}
   (lambda (self)
-    (let ((dpath (string-append 
-                 (get-environment-variable "HOME") 
-                 "/.kronodynamic/scraper-cleaner-database-file.bin")))
+    (let ((dpath (@ self dpath)))
     (display "This is the input directory: ")
     (display (@ self input-dir))
     (display "\n")
@@ -168,32 +173,53 @@ ____c-declare-end
     (display "\n")
     (if (file-exists? dpath) (raise "Unable to parse scrape data: database file exists"))
     (let* ((db (open-database dpath)))
-      (display "This is RocksDB database pointer: ")
-      (display db)
-      (display "Adding random key:\n")
-      (display (write-key db "key"))
-      (display "\n")
-      (display (write-key db "key"))
-      (display "\n")
-      (display (write-key db "keyes"))
-      (display "\n")
-      (let ((it (open-iterator db)))
-        (display "Iterator: ")
-        (display it)
+      {process-input-dir self db}
+      #;(begin
+        (display "This is RocksDB database pointer: ")
+        (display db)
+        (display "Adding random key:\n")
+        (display (write-key db "key"))
         (display "\n")
-        (iterator-first it)
-        (let ((key (iterator-key it)))
-          (display "This is current key: ")
-          (display key)
-          (display "\n"))
-        (iterator-next it)
-        (let ((key (iterator-key it)))
-          (display "This is current key: ")
-          (display key)
-          (display "\n"))
-        (close-iterator it))
+        (display (write-key db "key"))
+        (display "\n")
+        (display (write-key db "keyes"))
+        (display "\n")
+        (let ((it (open-iterator db)))
+          (display "Iterator: ")
+          (display it)
+          (display "\n")
+          (iterator-first it)
+          (let ((key (iterator-key it)))
+            (display "This is current key: ")
+            (display key)
+            (display "\n"))
+          (iterator-next it)
+          (let ((key (iterator-key it)))
+            (display "This is current key: ")
+            (display key)
+            (display "\n"))
+          (close-iterator it)))
       (close-database db)
       (display "Database closed.\n")
       (run-process ["rm" "-Rf" dpath])
       (display "Database removed.\n")))))
 
+(defmethod {process-input-dir Parser}
+  (lambda (self db)
+    (let* ((input-dir (@ self input-dir))
+           (files (sort (directory-files input-dir) string<?)))
+      (let loop ((cfile (car files)) (cfiles (cdr files)))
+        {process-input-file self db (string-append input-dir "/" cfile)}
+        (if (not (null? cfiles))
+          (loop (car cfiles) (cdr cfiles)))))))
+
+(defmethod {process-input-file Parser}
+  (lambda (self db file)
+    (map 
+      (lambda (line) 
+        (display line) 
+        (display "\n")
+        ;; TODO: Process each line as JSON: 
+        (display (string? line)) 
+        (display "\n")) 
+      (run-process ["bunzip2" "--stdout" file] coprocess: read-all-as-lines))))
