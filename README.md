@@ -7,7 +7,7 @@ You need to install the last version of [RocksDB](https://github.com/facebook/ro
 
 ```sh
 # Ubuntu install instructions
-sudo apt-get install -y zlib1g-dev libbz2-dev liblz4-dev libsnappy-dev libzstd-dev libgflags2.2 libgflags-dev
+sudo apt-get install -y bzip2 zlib1g-dev libbz2-dev liblz4-dev libsnappy-dev libzstd-dev libgflags2.2 libgflags-dev
 cd /tmp
 git clone git@github.com:facebook/rocksdb.git 
 cd rocks_db
