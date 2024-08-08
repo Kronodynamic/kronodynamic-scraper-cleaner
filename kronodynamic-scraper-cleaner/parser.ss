@@ -215,11 +215,17 @@ ____c-declare-end
 
 (defmethod {process-input-file Parser}
   (lambda (self db file)
-    (map 
-      (lambda (line) 
-        (display line) 
-        (display "\n")
-        ;; TODO: Process each line as JSON: 
-        (display (string? line)) 
-        (display "\n")) 
-      (run-process ["bunzip2" "--stdout" file] coprocess: read-all-as-lines))))
+    (run-process 
+      ["bunzip2" "--stdout" file] 
+      coprocess: 
+      (lambda (process)
+        (let loop ((l (read-line process)))
+          (if (not (eof-object? l))
+            (begin
+              (display file)
+              (display ":")
+              (display l)
+              (display "\n")
+              ;; TODO: Parse JSON Object here.
+              (loop (read-line process)))))))
+    (display "\n\n")))
