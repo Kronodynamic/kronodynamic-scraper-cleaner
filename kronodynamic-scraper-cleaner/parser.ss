@@ -1,11 +1,17 @@
 ;;; -*- Gerbil -*-
-(import :scheme/process-context
+(import :gerbil/runtime/error
+        :scheme/base
+        :scheme/process-context
         :std/error
         :std/foreign
         :std/misc/ports
         :std/misc/process
+        :std/pregexp
         :std/sort
-        :std/sugar)
+        :std/srfi/13
+        :std/sugar
+        :std/text/json
+        :std/text/utf8)
 (export #t)
 
 ;; External FFI declaration:
@@ -135,13 +141,13 @@ ____c-declare-end
   )
   (define-c-lambda open-database (nonnull-char-string) (pointer void) "open_database")
   (define-c-lambda close-database ((pointer void)) void "close_database")
-  (define-c-lambda write-key ((pointer void) nonnull-char-string) int "write_key")
+  (define-c-lambda write-key ((pointer void) nonnull-UTF-8-string) int "write_key")
   (define-c-lambda open-iterator ((pointer void)) (pointer void) "open_iterator")
   (define-c-lambda close-iterator ((pointer void)) void "rocksdb_iter_destroy")
   (define-c-lambda iterator-first((pointer void)) void "rocksdb_iter_seek_to_first")
   (define-c-lambda iterator-next ((pointer void)) void "rocksdb_iter_next")
   (define-c-lambda iterator-valid ((pointer void)) unsigned-char "rocksdb_iter_valid")
-  (define-c-lambda iterator-key ((pointer void)) char-string "iterator_key")
+  (define-c-lambda iterator-key ((pointer void)) UTF-8-string "iterator_key")
   (define-c-lambda iterator-value ((pointer void)) long "iterator_value"))
 
 (defclass Parser 
@@ -209,23 +215,35 @@ ____c-declare-end
     (let* ((input-dir (@ self input-dir))
            (files (sort (directory-files input-dir) string<?)))
       (let loop ((cfile (car files)) (cfiles (cdr files)))
+        (display "Processing ")
+        (display (- (length files) (length cfiles)))
+        (display " of ")
+        (display (length files))
+        (display ": ")
         {process-input-file self db (string-append input-dir "/" cfile)}
+        
         (if (not (null? cfiles))
           (loop (car cfiles) (cdr cfiles)))))))
 
 (defmethod {process-input-file Parser}
   (lambda (self db file)
+    (display file)
+    (display "\n")
     (run-process 
       ["bunzip2" "--stdout" file] 
       coprocess: 
       (lambda (process)
         (let loop ((l (read-line process)))
           (if (not (eof-object? l))
-            (begin
-              (display file)
-              (display ":")
-              (display l)
-              (display "\n")
-              ;; TODO: Parse JSON Object here.
-              (loop (read-line process)))))))
-    (display "\n\n")))
+            (let* ((register (string->json-object l))
+                   (original (hash-ref register 'text))
+                   (ltext (pregexp-replace* 
+                            " +" 
+                            (pregexp-replace* 
+                              "\n|\t|\r" (string-downcase original) " ") " "))
+                   (text (with-exception-catcher 
+                           (lambda (exc) ltext)
+                           (lambda () (string-trim-both ltext)))))
+              ; Dump text as a key on RocksDB:
+              (write-key db text) 
+              (loop (read-line process)))))))))
