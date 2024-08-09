@@ -29,3 +29,6 @@ tags
 auto-save-list
 tramp
 .\#*
+
+# testing data output:
+output.txt
